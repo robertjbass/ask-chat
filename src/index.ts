@@ -1,10 +1,16 @@
 import { Configuration, OpenAIApi } from "openai";
 import readline from "readline";
 import "dotenv/config";
+import chalk from "chalk";
 
 const decoder = new TextDecoder("utf-8");
+const responseColor = "green";
+const userNameColor = "blue";
 
-const user = process.env.USER!;
+const userName = process.env.USER!;
+const systemPrompt =
+  process.env.SYSTEM_PROMPT ||
+  "You are an assistant that helps software developers get information from their terminal.";
 
 type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -16,8 +22,7 @@ class OpenAiClient {
   private messages: ChatMessage[] = [
     {
       role: "system",
-      content:
-        "You are an assistant that helps software developers get information from their terminal.",
+      content: systemPrompt,
     },
   ];
 
@@ -27,8 +32,6 @@ class OpenAiClient {
   }
 
   private async chatCompletion(prompt: string) {
-    if (prompt === "exit") process.exit(0);
-
     return new Promise(async (resolve, reject) => {
       this.messages.push({ role: "user", content: prompt });
       const completion: any = await this.openai.createChatCompletion(
@@ -53,7 +56,9 @@ class OpenAiClient {
             const { delta } = choices[0];
             const { content } = delta;
 
-            if (content) process.stdout.write(content);
+            if (content) {
+              process.stdout.write(chalk[responseColor](content));
+            }
           }
         }
       });
@@ -64,7 +69,7 @@ class OpenAiClient {
   }
 
   async run() {
-    process.stdout.write(`\n\n${user}: `);
+    process.stdout.write(`\n\n${chalk[userNameColor](userName)}: `);
     const input = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
