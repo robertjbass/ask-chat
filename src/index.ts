@@ -3,28 +3,20 @@ import readline from "readline";
 import "dotenv/config";
 import chalk from "chalk";
 import fs from "fs";
-import { createSnippet, defaultSystemPrompt, help } from "./defaultText.js";
-import { ChatMessage } from "./types.js";
+import { createSnippet, defaultConfig, help } from "./defaultValues.js";
+import { ChatMessage, Config } from "./types.js";
 import { copyToClipboard } from "./helpers.js";
-
 const decoder = new TextDecoder("utf-8");
-const responseColor = "green";
-const userNameColor = "blue";
-const snippetFolder = "./snippets";
 
-const userName = process.env.USER!;
-const systemPrompt = process.env.SYSTEM_PROMPT || defaultSystemPrompt;
 class OpenAiClient {
   private openai: OpenAIApi;
-  private messages: ChatMessage[] = [
-    {
-      role: "system",
-      content: systemPrompt,
-    },
-  ];
+  private messages: ChatMessage[];
+  private config: Config = defaultConfig;
 
-  constructor(apiKey: string) {
-    const configuration = new Configuration({ apiKey });
+  constructor(config: Config) {
+    this.config = config;
+    this.messages = [{ role: "system", content: this.config?.systemPrompt }];
+    const configuration = new Configuration({ apiKey: this.config.apiKey });
     this.openai = new OpenAIApi(configuration);
   }
 
@@ -58,7 +50,6 @@ class OpenAiClient {
     } else if (prompt === "copy") {
       const message = await this.getCodeFromLastMessage();
       const { code } = JSON.parse(message);
-      console.log(`Copying code to clipboard: ${code}`);
       await copyToClipboard(code);
       return new Promise((resolve) => resolve(this.run()));
     } else if (prompt === "save") {
@@ -71,7 +62,12 @@ class OpenAiClient {
       const snippet = code;
 
       console.log(`Saving ${language} snippet ${fileName}`);
-      fs.writeFileSync(`${snippetFolder}/${fileName}`, snippet);
+      if (!fs.existsSync(this.config.snippetFolder)) {
+        fs.mkdirSync(this.config.snippetFolder);
+      }
+      const filePath = `${this.config.snippetFolder}/${fileName}`;
+      fs.writeFileSync(filePath, snippet);
+      console.log(`Saved ${language} snippet at ${filePath}`);
 
       return new Promise((resolve) => resolve(this.run()));
     }
@@ -102,6 +98,8 @@ class OpenAiClient {
 
             if (content) {
               resultText += content;
+              const responseColor = this.config?.responseColor || "green";
+              // @ts-ignore
               process.stdout.write(chalk[responseColor](content));
             }
           } else {
@@ -120,7 +118,10 @@ class OpenAiClient {
   }
 
   async run() {
-    process.stdout.write(`\n\n${chalk[userNameColor](userName)}: `);
+    const userNameColor = this.config?.userNameColor || "blue";
+
+    // @ts-ignore
+    process.stdout.write(`\n\n${chalk[userNameColor](this.config.userName)}: `);
     const input = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
@@ -134,6 +135,35 @@ class OpenAiClient {
   }
 }
 
-const openAiClient = new OpenAiClient(process.env.OPENAI_API_KEY!);
+const init = async () => {
+  const configFileLocation = `${process.env.HOME}/.gpterminal.json`;
+  if (!fs.existsSync(configFileLocation)) {
+    fs.writeFileSync(configFileLocation, JSON.stringify({}));
+  }
+  const config: Config = JSON.parse(
+    fs.readFileSync(configFileLocation, "utf8")
+  );
 
-openAiClient.run();
+  if (!config?.apiKey) {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+      terminal: false,
+    });
+
+    await new Promise((resolve, _reject) => {
+      rl.question("Enter your OpenAI API key: ", (answer) => {
+        const config: Config = { ...defaultConfig, apiKey: answer };
+        console.clear();
+        fs.writeFileSync(configFileLocation, JSON.stringify(config));
+        return resolve(config);
+      });
+    });
+    await init();
+  } else {
+    const openAiClient = new OpenAiClient(config);
+    await openAiClient.run();
+  }
+};
+
+init();
