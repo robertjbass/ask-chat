@@ -1,12 +1,15 @@
 {
-  "name": "terminal-gpt",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "ask-chat",
+  "version": "0.9.346",
+  "description": "Chat GPT in terminal with snippet support and more",
+  "main": "lib/index.js",
   "type": "module",
+  "bin": {
+    "index": "lib/index.js"
+  },
   "scripts": {
     "build": "node_modules/.bin/tsc",
-    "start": "node dist/index.js",
+    "start": "node lib/index.js",
     "serve": "nodemon --watch src --ext 'ts' --exec \"npm run build && npm run start\""
   },
   "keywords": [],
