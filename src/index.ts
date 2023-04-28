@@ -3,6 +3,9 @@ import readline from "readline";
 import "dotenv/config";
 import chalk from "chalk";
 import fs from "fs";
+import { createSnippet, defaultSystemPrompt, help } from "./defaultText.js";
+import { ChatMessage } from "./types.js";
+import { copyToClipboard } from "./helpers.js";
 
 const decoder = new TextDecoder("utf-8");
 const responseColor = "green";
@@ -10,21 +13,13 @@ const userNameColor = "blue";
 const snippetFolder = "./snippets";
 
 const userName = process.env.USER!;
-const systemPrompt =
-  process.env.SYSTEM_PROMPT ||
-  "You are an assistant that helps software developers get information from their terminal.";
-
-type ChatMessage = {
-  role: "system" | "user" | "assistant";
-  content: string;
-};
-
+const systemPrompt = process.env.SYSTEM_PROMPT || defaultSystemPrompt;
 class OpenAiClient {
   private openai: OpenAIApi;
   private messages: ChatMessage[] = [
     {
       role: "system",
-      content: systemPrompt,
+      content: defaultSystemPrompt,
     },
   ];
 
@@ -38,35 +33,7 @@ class OpenAiClient {
       messages: [
         {
           role: "system",
-          content: `Your job is to look at some text and extract the code from it. You will return only JSON in the following format:
-{
-  "code": <EXTRACTED CODE>,
-  "language": <LANGUAGE OF CODE>
-  "snippetName": <NAME OF SNIPPET>,
-  "fileExtension": <FILE EXTENSION>,
-}
-
-Do not return it as a string, but as a JSON object. No text should be returned, only the stringified JSON object.
-Do not say anything else, just return the stringified JSON object.
-
-Good Example (DO THIS):
-'{"code": "console.log('Hello World!')","language": "JavaScript","snippetName": "Hello World","fileExtension": "js"}'
-
-Bad Example (DO NOT DO THIS):
-Here is the JSON object for the Python code snippet:
-
-\`\`\`
-{
-  "code": "print(\"Hello, World!\")",
-  "language": "Python",
-  "snippetName": "Hello World",
-  "fileExtension": "py"
-}
-\`\`\`
-
-Do not add a '.' to the fileExtension. Do not add a newline at the end of the JSON object. Do not add any other text.
-file names should be in camelCase, PascalCase, or snakeCase depending on the language. Do not use kebab-case. Do not use spaces in filenames
-`,
+          content: createSnippet,
         },
         {
           role: "user",
@@ -86,13 +53,13 @@ file names should be in camelCase, PascalCase, or snakeCase depending on the lan
       console.clear();
       return new Promise((resolve) => resolve(this.run()));
     } else if (prompt === "help") {
-      console.log(
-        "exit: exit the program\n" +
-          "clear: clear the terminal\n" +
-          "help: show this help menu\n" +
-          "snippets: show a list of snippets\n" +
-          "snippet: show a snippet"
-      );
+      console.log(help);
+      return new Promise((resolve) => resolve(this.run()));
+    } else if (prompt === "copy") {
+      const message = await this.getCodeFromLastMessage();
+      const { code } = JSON.parse(message);
+      console.log(`Copying code to clipboard: ${code}`);
+      await copyToClipboard(code);
       return new Promise((resolve) => resolve(this.run()));
     } else if (prompt === "save") {
       const message = await this.getCodeFromLastMessage();
