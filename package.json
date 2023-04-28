@@ -18,10 +18,9 @@
     "typescript": "^5.0.4"
   },
   "dependencies": {
-    "ansi-escapes": "^6.2.0",
     "chalk": "^5.2.0",
+    "clipboardy": "^3.0.0",
     "dotenv": "^16.0.3",
-    "openai": "^3.2.1",
-    "readline": "^1.3.0"
+    "openai": "^3.2.1"
   }
 }

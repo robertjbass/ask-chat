@@ -19,7 +19,7 @@ class OpenAiClient {
   private messages: ChatMessage[] = [
     {
       role: "system",
-      content: defaultSystemPrompt,
+      content: systemPrompt,
     },
   ];
 
