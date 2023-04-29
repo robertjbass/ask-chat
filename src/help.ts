@@ -70,9 +70,18 @@ ${description("show a list of snippets")}
 
 ${option(Option.Snippet)}
 ${description("show snippet - snippet <name or number>")}
+${description("snippet fizzbuzz || snippet 1")}
+
+${option(Option.Debug)}
+${description("debug file - debug <absolute path>")}
+${description("debug /Users/bob/dev/ask-chat/lib/openAiClient.js")}
+
+${option(Option.Cat)}
+${description("show file with syntax highlighting - cat <absolute path>")}
+${description("cat /Users/bob/dev/ask-chat/lib/openAiClient.js")}
 
 ${option(Option.Copy)}
-${description("copy the last code snippet to the clipboard")}
+${description("copy the code snippets from the last response to clipboard")}
 
 ${option(Option.Clear)}
 ${description("clear the terminal")}

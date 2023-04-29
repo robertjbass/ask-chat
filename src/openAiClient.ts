@@ -3,6 +3,7 @@ import chalk from "chalk";
 import readline from "readline";
 import clipboardy from "clipboardy";
 import fs from "fs";
+import { highlight } from "cli-highlight";
 import { createSnippet, defaultConfig } from "./defaultValues.js";
 import { createCenteredString, helpMenu } from "./help.js";
 import { ChatMessage, Config, Option } from "./types.js";
@@ -101,12 +102,16 @@ ${chalk["yellow"](`Please enter 'snippet <1-${snippets.length}>'`)} ${chalk[
       }
     }
 
-    const snippet = fs.readFileSync(
-      `${this.config.snippetFolder}/${snippetName}`,
-      "utf8"
-    );
-    // TODO - style
-    console.log(snippet);
+    const filePath = `${this.config.snippetFolder}/${snippetName}`;
+    const snippet = fs.readFileSync(filePath, "utf8");
+
+    console.log(`
+${chalk["bgCyan"]["blue"].bold(createCenteredString(filePath))}
+
+${highlight(snippet, {
+  language: snippetName.split(".")[1],
+})}
+`);
   }
 
   private saveSnippet({
@@ -138,18 +143,39 @@ ${chalk["yellow"](`Please enter 'snippet <1-${snippets.length}>'`)} ${chalk[
     let list = "";
     let i = 1;
     for (const snippet of snippets) {
-      list += `${i} - ${snippet}\n`;
+      list += `${chalk["blue"].bold(i)} ${snippet}\n`;
       i++;
     }
     console.log(list);
   }
 
-  private async chatCompletion(prompt: Option | string) {
-    if (prompt.includes("snippet ") && prompt.split(" ").length > 1) {
-      const snippetName = prompt.split(" ").slice(1).join(" ");
-      this.showSnippet(snippetName);
-      return new Promise((resolve) => resolve(this.run()));
+  private cat(absolutePath: string) {
+    const filePath = absolutePath.split(" ").join("");
+    try {
+      const file = fs.readFileSync(filePath, "utf8");
+      console.log(`
+${chalk["bgCyan"]["blue"].bold(createCenteredString(filePath))}
+`);
+      console.log(highlight(file, { language: filePath.split(".")[1] }));
+    } catch {
+      console.log(chalk["red"](`File ${filePath} does not exist`));
     }
+  }
+
+  // TODO - in progress
+  private debugFile(absolutePath: string) {
+    const filePath = absolutePath.split(" ").join("");
+    try {
+      const file = fs.readFileSync(filePath, "utf8");
+      console.log(highlight(file, { language: filePath.split(".")[1] }));
+    } catch {
+      console.log(chalk["red"](`File ${filePath} does not exist`));
+    }
+  }
+
+  private async chatCompletion(input: Option | string) {
+    const prompt: Option = input.split(" ")[0] as Option;
+    const arg: string = input.split(" ").slice(1).join(" ");
 
     switch (prompt) {
       case "exit":
@@ -159,6 +185,12 @@ ${chalk["yellow"](`Please enter 'snippet <1-${snippets.length}>'`)} ${chalk[
         return new Promise((resolve) => resolve(this.run()));
       case "help":
         this.showHelp();
+        return new Promise((resolve) => resolve(this.run()));
+      case "cat":
+        this.cat(arg);
+        return new Promise((resolve) => resolve(this.run()));
+      case "debug":
+        this.debugFile(arg);
         return new Promise((resolve) => resolve(this.run()));
       case "copy":
         console.log(chalk["yellow"].italic("Copying..."));
@@ -183,6 +215,11 @@ ${chalk["yellow"](`Please enter 'snippet <1-${snippets.length}>'`)} ${chalk[
           fileExtension,
           language,
         });
+        return new Promise((resolve) => resolve(this.run()));
+
+      case "snippet":
+        const name = arg;
+        this.showSnippet(name);
         return new Promise((resolve) => resolve(this.run()));
 
       case "snippets":

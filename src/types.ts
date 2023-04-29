@@ -26,6 +26,8 @@ export type ChalkColor =
 
 export enum Option {
   Save = "save",
+  Cat = "cat",
+  Debug = "debug",
   Copy = "copy",
   Snippets = "snippets",
   Snippet = "snippet",
