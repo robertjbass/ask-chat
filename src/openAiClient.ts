@@ -8,6 +8,7 @@ import { createSnippet, defaultConfig } from "./defaultValues.js";
 import { createCenteredString, helpMenu } from "./help.js";
 import { ChatMessage, Config, Option } from "./types.js";
 import os from "os";
+import { TextDecoder } from "util";
 const decoder = new TextDecoder("utf-8");
 
 const copyToClipboard = async (text: string) => {
@@ -149,30 +150,61 @@ ${highlight(snippet, {
     console.log(list);
   }
 
-  private cat(absolutePath: string) {
-    const filePath = absolutePath.split(" ").join("");
+  private readFile(fPath: string) {
+    const isAbsolutePath = fPath.startsWith("/");
+    let filePath = fPath.split(" ").join("");
+
+    if (!isAbsolutePath) {
+      const currentDirectory = process.cwd();
+      filePath = `${currentDirectory}/${filePath}`;
+    }
+
     try {
       const file = fs.readFileSync(filePath, "utf8");
-      console.log(`
-${chalk["bgCyan"]["blue"].bold(createCenteredString(filePath))}
-`);
-      console.log(highlight(file, { language: filePath.split(".")[1] }));
+      return file;
     } catch {
       console.log(chalk["red"](`File ${filePath} does not exist`));
     }
   }
 
-  private async debugFile(absolutePath: string) {
-    const filePath = absolutePath.split(" ").join("");
+  private cat(fPath: string) {
+    if (fPath === "") return new Promise((resolve) => resolve(this.run()));
+
+    const file = this.readFile(fPath);
+    if (!file) return new Promise((resolve) => resolve(this.run()));
     try {
-      const file = fs.readFileSync(filePath, "utf8");
-      console.log(highlight(file, { language: filePath.split(".")[1] }));
-      return `Find the bug(s) in this file:
-${file}`;
+      console.log(highlight(file, { language: fPath.split(".")[1] }));
     } catch {
-      console.log(chalk["red"](`File ${filePath} does not exist`));
-      return new Promise((resolve) => resolve(this.run()));
+      console.log(
+        chalk["red"](`No syntax highlighting for this file type\n\n`)
+      );
+      console.log(file);
     }
+  }
+
+  private async debugFile(fPath: string) {
+    if (fPath === "") return new Promise((resolve) => resolve(this.run()));
+
+    const file = this.readFile(fPath);
+    if (!file) return new Promise((resolve) => resolve(this.run()));
+
+    try {
+      console.log(highlight(file, { language: fPath.split(".")[1] }));
+    } catch {
+      console.log(
+        chalk["red"](`No syntax highlighting for this file type\n\n`)
+      );
+    }
+    return `Find the bug(s) in this file:
+${file}`;
+  }
+
+  private async copy() {
+    console.log(chalk["yellow"].italic("Copying..."));
+    const message = await this.getCodeFromLastMessage();
+    const { code } = JSON.parse(message);
+    await copyToClipboard(code);
+    console.log(chalk["green"]("Text copied to clipboard"));
   }
 
   private async chatCompletion(prompt: string) {
@@ -191,14 +223,10 @@ ${file}`;
         this.showHelp();
         return new Promise((resolve) => resolve(this.run()));
       case "cat":
-        this.cat(arg);
+        await this.cat(arg);
         return new Promise((resolve) => resolve(this.run()));
       case "copy":
-        console.log(chalk["yellow"].italic("Copying..."));
-        const message = await this.getCodeFromLastMessage();
-        const { code } = JSON.parse(message);
-        await copyToClipboard(code);
-        console.log(chalk["green"]("Text copied to clipboard"));
+        await this.copy();
         return new Promise((resolve) => resolve(this.run()));
       case "save":
         console.log(chalk["yellow"].italic("Saving..."));

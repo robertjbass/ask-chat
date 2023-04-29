@@ -52,6 +52,10 @@ const description = (description: string) => {
   const textColor = "cyan";
   return chalk[textColor](description);
 };
+const example = (example: string) => {
+  const textColor = "magenta";
+  return chalk[textColor](example);
+};
 const section = (text: string) => {
   const centeredText = createCenteredString(text);
   const bgColor = "bgCyan";
@@ -60,6 +64,7 @@ const section = (text: string) => {
 };
 
 const demoAbsoluteFilePath = "/Users/bob/dev/ask-chat/lib/openAiClient.js";
+const demoRelativePath = "./openAiClient.js";
 
 export const help = chalkTemplate`
 ${section("OPTIONS")}
@@ -75,12 +80,14 @@ ${description("show snippet - snippet <name or number>")}
 ${description("snippet fizzbuzz || snippet 1")}
 
 ${option(Option.Debug)}
-${description("debug file - debug <absolute path>")}
-${description(`debug ${demoAbsoluteFilePath}`)}
+${description("debug file - debug <file path>")}
+${example(`debug ${demoAbsoluteFilePath}`)} ${chalk["gray"]("# absolute path")}
+${example(`debug ${demoRelativePath}`)} ${chalk["gray"]("# relative path")}
 
 ${option(Option.Cat)}
-${description("show file with syntax highlighting - cat <absolute path>")}
-${description(`cat ${demoAbsoluteFilePath}`)}
+${description("show file with syntax highlighting - cat <file path>")}
+${example(`cat ${demoAbsoluteFilePath}`)} ${chalk["gray"]("# absolute path")}
+${example(`cat ${demoRelativePath}`)} ${chalk["gray"]("# relative path")}
 
 ${option(Option.Copy)}
 ${description("copy the code snippets from the last response to clipboard")}
