@@ -4,7 +4,7 @@ import readline from "readline";
 import clipboardy from "clipboardy";
 import fs from "fs";
 import { createSnippet, defaultConfig } from "./defaultValues.js";
-import { helpMenu } from "./help.js";
+import { createCenteredString, helpMenu } from "./help.js";
 import { ChatMessage, Config, Option } from "./types.js";
 import os from "os";
 const decoder = new TextDecoder("utf-8");
@@ -15,6 +15,17 @@ const copyToClipboard = async (text: string) => {
   } catch (error) {
     console.error("Failed to copy text to clipboard:", error);
   }
+};
+
+const sanitize = (name: string) => {
+  return name
+    .toLowerCase()
+    .split(" ")
+    .join("")
+    .split("-")
+    .join("")
+    .split("_")
+    .join("");
 };
 
 export class OpenAiClient {
@@ -54,7 +65,92 @@ export class OpenAiClient {
     helpMenu();
   }
 
-  private async chatCompletion(prompt: Option) {
+  private showSnippet(snippetName: string) {
+    const snippetNameAsNumber = parseInt(snippetName);
+    const snippetNameIsNumber = !isNaN(snippetNameAsNumber);
+    const snippets = fs.readdirSync(this.config.snippetFolder);
+
+    if (snippetNameIsNumber) {
+      if (snippetNameAsNumber > snippets.length || snippetNameAsNumber < 1) {
+        console.log(`
+${chalk["red"].bold(`Snippet ${snippetNameAsNumber} does not exist`)}
+${chalk["yellow"](`Please enter 'snippet <1-${snippets.length}>'`)} ${chalk[
+          "blue"
+        ].italic("or")} ${chalk["yellow"]("'snippets' for a list")}`);
+        return;
+      }
+      let i = 1;
+      for (const snippet of snippets) {
+        if (i === snippetNameAsNumber) {
+          snippetName = snippet;
+        }
+        i++;
+      }
+    }
+
+    if (!snippets.includes(snippetName)) {
+      const snippetsMap = snippets.map((snippet) => {
+        const key = sanitize(snippet.split(".")[0]);
+        return { [`${key}`]: snippet };
+      });
+
+      const snippetNameAsKey = sanitize(snippetName);
+      for (const snippet of snippetsMap) {
+        const [[key, value]] = Object.entries(snippet);
+        if (key === snippetNameAsKey) snippetName = value;
+      }
+    }
+
+    const snippet = fs.readFileSync(
+      `${this.config.snippetFolder}/${snippetName}`,
+      "utf8"
+    );
+    // TODO - style
+    console.log(snippet);
+  }
+
+  private saveSnippet({
+    snippet,
+    snippetName,
+    fileExtension,
+    language,
+  }: {
+    snippet: string;
+    snippetName: string;
+    fileExtension: string;
+    language: string;
+  }) {
+    const fileName = `${snippetName}.${fileExtension}`;
+
+    if (!fs.existsSync(this.config.snippetFolder)) {
+      fs.mkdirSync(this.config.snippetFolder);
+    }
+    const filePath = `${this.config.snippetFolder}/${fileName}`;
+    fs.writeFileSync(filePath, snippet);
+    console.log(chalk["green"](`Saved ${language} snippet at ${filePath}`));
+  }
+
+  private showSnippets() {
+    const snippets = fs.readdirSync(this.config.snippetFolder);
+    console.log(
+      `\n${chalk["bgCyan"]["blue"].bold(createCenteredString("SNIPPETS"))}\n`
+    );
+    let list = "";
+    let i = 1;
+    for (const snippet of snippets) {
+      list += `${i} - ${snippet}\n`;
+      i++;
+    }
+    console.log(list);
+  }
+
+  private async chatCompletion(prompt: Option | string) {
+    if (prompt.includes("snippet ") && prompt.split(" ").length > 1) {
+      const snippetName = prompt.split(" ").slice(1).join(" ");
+      this.showSnippet(snippetName);
+      return new Promise((resolve) => resolve(this.run()));
+    }
+
     switch (prompt) {
       case "exit":
         process.exit(0);
@@ -75,24 +171,24 @@ export class OpenAiClient {
         console.log(chalk["yellow"].italic("Saving..."));
         const saveMessage = await this.getCodeFromLastMessage();
         const {
-          code: saveCode,
+          code: snippet,
           language,
           snippetName,
           fileExtension,
         } = JSON.parse(saveMessage);
-        // console.log({ code: saveCode, language, snippetName, fileExtension });
 
-        const fileName = `${snippetName}.${fileExtension}`;
-        const snippet = saveCode;
-
-        if (!fs.existsSync(this.config.snippetFolder)) {
-          fs.mkdirSync(this.config.snippetFolder);
-        }
-        const filePath = `${this.config.snippetFolder}/${fileName}`;
-        fs.writeFileSync(filePath, snippet);
-        console.log(chalk["green"](`Saved ${language} snippet at ${filePath}`));
-
+        this.saveSnippet({
+          snippet,
+          snippetName,
+          fileExtension,
+          language,
+        });
         return new Promise((resolve) => resolve(this.run()));
+
+      case "snippets":
+        this.showSnippets();
+        return new Promise((resolve) => resolve(this.run()));
+
       default:
         return new Promise(async (resolve, reject) => {
           this.messages.push({ role: "user", content: prompt });

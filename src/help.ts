@@ -10,7 +10,7 @@ const chalkTemplate = (strings: any, ...keys: any) => {
   return chalk(output);
 };
 
-const createCenteredString = (word: string, width?: number) => {
+export const createCenteredString = (word: string, width?: number) => {
   const columns = width ? width : process.stdout.columns;
   const wordLength = word.length;
   const leftPadding = Math.floor((columns - wordLength) / 2);
@@ -69,7 +69,7 @@ ${option(Option.Snippets)}
 ${description("show a list of snippets")}
 
 ${option(Option.Snippet)}
-${description("show snippet - snippet <name>")}
+${description("show snippet - snippet <name or number>")}
 
 ${option(Option.Copy)}
 ${description("copy the last code snippet to the clipboard")}
