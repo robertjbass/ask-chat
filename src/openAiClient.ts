@@ -5,14 +5,13 @@ import clipboardy from "clipboardy";
 import fs from "fs";
 import { createSnippet, defaultConfig } from "./defaultValues.js";
 import { helpMenu } from "./help.js";
-import { ChatMessage, Config } from "./types.js";
+import { ChatMessage, Config, Option } from "./types.js";
 import os from "os";
 const decoder = new TextDecoder("utf-8");
 
 const copyToClipboard = async (text: string) => {
   try {
     await clipboardy.write(text);
-    console.log("Text copied to clipboard successfully!");
   } catch (error) {
     console.error("Failed to copy text to clipboard:", error);
   }
@@ -55,79 +54,86 @@ export class OpenAiClient {
     helpMenu();
   }
 
-  private async chatCompletion(prompt: string) {
-    if (prompt === "exit") {
-      process.exit(0);
-    } else if (prompt === "clear") {
-      console.clear();
-      return new Promise((resolve) => resolve(this.run()));
-    } else if (prompt === "help") {
-      this.showHelp();
+  private async chatCompletion(prompt: Option) {
+    switch (prompt) {
+      case "exit":
+        process.exit(0);
+      case "clear":
+        console.clear();
+        return new Promise((resolve) => resolve(this.run()));
+      case "help":
+        this.showHelp();
+        return new Promise((resolve) => resolve(this.run()));
+      case "copy":
+        console.log(chalk["yellow"].italic("Copying..."));
+        const message = await this.getCodeFromLastMessage();
+        const { code } = JSON.parse(message);
+        await copyToClipboard(code);
+        console.log(chalk["green"]("Text copied to clipboard"));
+        return new Promise((resolve) => resolve(this.run()));
+      case "save":
+        console.log(chalk["yellow"].italic("Saving..."));
+        const saveMessage = await this.getCodeFromLastMessage();
+        const {
+          code: saveCode,
+          language,
+          snippetName,
+          fileExtension,
+        } = JSON.parse(saveMessage);
+        // console.log({ code: saveCode, language, snippetName, fileExtension });
 
-      return new Promise((resolve) => resolve(this.run()));
-    } else if (prompt === "copy") {
-      const message = await this.getCodeFromLastMessage();
-      const { code } = JSON.parse(message);
-      await copyToClipboard(code);
-      return new Promise((resolve) => resolve(this.run()));
-    } else if (prompt === "save") {
-      const message = await this.getCodeFromLastMessage();
-      const { code, language, snippetName, fileExtension } =
-        JSON.parse(message);
-      console.log({ code, language, snippetName, fileExtension });
+        const fileName = `${snippetName}.${fileExtension}`;
+        const snippet = saveCode;
 
-      const fileName = `${snippetName}.${fileExtension}`;
-      const snippet = code;
-
-      console.log(`Saving ${language} snippet ${fileName}`);
-      if (!fs.existsSync(this.config.snippetFolder)) {
-        fs.mkdirSync(this.config.snippetFolder);
-      }
-      const filePath = `${this.config.snippetFolder}/${fileName}`;
-      fs.writeFileSync(filePath, snippet);
-      console.log(`Saved ${language} snippet at ${filePath}`);
-
-      return new Promise((resolve) => resolve(this.run()));
-    }
-    return new Promise(async (resolve, reject) => {
-      this.messages.push({ role: "user", content: prompt });
-      const completion: any = await this.openai.createChatCompletion(
-        {
-          messages: this.messages,
-          model: "gpt-3.5-turbo",
-          stream: true,
-        },
-        { responseType: "stream" }
-      );
-
-      let resultText = "";
-      completion.data.on("data", (chunk: any) => {
-        const lines = decoder.decode(chunk).split("\n");
-        const mappedLines = lines
-          .map((line) => line.replace(/^data: /, "").trim())
-          .filter((line) => line !== "" && line !== undefined);
-
-        for (const line of mappedLines) {
-          if (line !== "[DONE]") {
-            const parsedLine = JSON.parse(line);
-            const { choices } = parsedLine;
-            const { delta } = choices[0];
-            const { content } = delta;
-
-            if (content) {
-              resultText += content;
-              const responseColor = this.config?.responseColor || "green";
-              process.stdout.write(chalk[responseColor](content));
-            }
-          } else {
-            this.addAssistantMessage(resultText);
-          }
+        if (!fs.existsSync(this.config.snippetFolder)) {
+          fs.mkdirSync(this.config.snippetFolder);
         }
-      });
+        const filePath = `${this.config.snippetFolder}/${fileName}`;
+        fs.writeFileSync(filePath, snippet);
+        console.log(chalk["green"](`Saved ${language} snippet at ${filePath}`));
 
-      completion.data.on("end", () => resolve(this.run()));
-      completion.data.on("error", (error: any) => reject(error));
-    });
+        return new Promise((resolve) => resolve(this.run()));
+      default:
+        return new Promise(async (resolve, reject) => {
+          this.messages.push({ role: "user", content: prompt });
+          const completion: any = await this.openai.createChatCompletion(
+            {
+              messages: this.messages,
+              model: "gpt-3.5-turbo",
+              stream: true,
+            },
+            { responseType: "stream" }
+          );
+
+          let resultText = "";
+          completion.data.on("data", (chunk: any) => {
+            const lines = decoder.decode(chunk).split("\n");
+            const mappedLines = lines
+              .map((line) => line.replace(/^data: /, "").trim())
+              .filter((line) => line !== "" && line !== undefined);
+
+            for (const line of mappedLines) {
+              if (line !== "[DONE]") {
+                const parsedLine = JSON.parse(line);
+                const { choices } = parsedLine;
+                const { delta } = choices[0];
+                const { content } = delta;
+
+                if (content) {
+                  resultText += content;
+                  const responseColor = this.config?.responseColor || "green";
+                  process.stdout.write(chalk[responseColor](content));
+                  return;
+                }
+              }
+            }
+            this.addAssistantMessage(resultText);
+          });
+
+          completion.data.on("end", () => resolve(this.run()));
+          completion.data.on("error", (error: any) => reject(error));
+        });
+    }
   }
 
   private addAssistantMessage(content: string) {
@@ -146,7 +152,7 @@ export class OpenAiClient {
       terminal: false,
     });
 
-    input.on("line", (line) => {
+    input.on("line", (line: any) => {
       input.close();
       this.chatCompletion(line).catch(console.error);
     });

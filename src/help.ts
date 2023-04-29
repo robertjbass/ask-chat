@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import { Option } from "./types.js";
 
 const chalkTemplate = (strings: any, ...keys: any) => {
   const output = strings.reduce((acc: string, str: string, i: number) => {
@@ -34,15 +35,6 @@ const longestOptionLength = (enumObject: any) => {
   return maxLength;
 };
 
-enum Option {
-  Exit = "exit",
-  Clear = "clear",
-  Help = "help",
-  Snippets = "snippets",
-  Snippet = "snippet",
-  Copy = "copy",
-}
-
 const optionLength = longestOptionLength(Option);
 
 const padRight = (text: string, length: number) => {
@@ -70,14 +62,8 @@ const section = (text: string) => {
 export const help = chalkTemplate`
 ${section("OPTIONS")}
 
-${option(Option.Exit)}
-${description("exit the program")}
-
-${option(Option.Clear)}
-${description("clear the terminal")}
-
-${option(Option.Help)}
-${description("show this help menu")}
+${option(Option.Save)}
+${description("save most recent code snippet or response")}
 
 ${option(Option.Snippets)}
 ${description("show a list of snippets")}
@@ -87,6 +73,15 @@ ${description("show snippet - snippet <name>")}
 
 ${option(Option.Copy)}
 ${description("copy the last code snippet to the clipboard")}
+
+${option(Option.Clear)}
+${description("clear the terminal")}
+
+${option(Option.Exit)}
+${description("exit the program")}
+
+${option(Option.Help)}
+${description("show this help menu")}
 
 ${section("https://github.com/robertjbass")}
 `;

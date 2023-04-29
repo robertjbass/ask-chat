@@ -23,3 +23,13 @@ export type ChalkColor =
   | "white"
   | "gray"
   | "grey";
+
+export enum Option {
+  Save = "save",
+  Copy = "copy",
+  Snippets = "snippets",
+  Snippet = "snippet",
+  Help = "help",
+  Clear = "clear",
+  Exit = "exit",
+}
