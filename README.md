@@ -4,7 +4,12 @@ The Ask-Chat CLI tool allows you to interact with a chat client using the comman
 
 ## Getting Started
 
-To start the tool, simply run the command `npx ask-chat` in your terminal.
+Requires Node and NPM to run
+To start the tool, simply run the command the following command in your terminal:
+
+```bash
+npx ask-chat
+```
 
 ## Usage
 
@@ -12,12 +17,12 @@ The `ask-chat` interactive terminal is effectively `chat gpt` with many custom c
 
 You can immediately start chatting:
 
-```bash
+````txt
 bob: How do I write fizzbuzz in python?
 
 
 Here's how you can write the fizzbuzz program in Python:
-```
+
 
 ```python
 for num in range(1, 101):
@@ -34,11 +39,11 @@ for num in range(1, 101):
         print(num)
 ```
 
-```bash
+
 In this program, we iterate over the numbers 1 to 100 using a `for` loop. For each number, we check if it is divisible by 3, 5, or both using the modulo operator (`%`).
 
 If the number is divisible by both 3 and 5, we print "FizzBuzz". If it is divisible by 3, we print "Fizz". If it is divisible by 5, we print "Buzz". And if it is not divisible by either 3 or 5, we simply print the number itself.
-```
+````
 
 ## snippets
 
@@ -115,8 +120,8 @@ help
 
 ## Contributing
 
-If you'd like to contribute to the Ask-Chat CLI tool or report any issues, please visit the [GitHub repository](https://github.com/robertjbass/ask-chat).
+If you'd like to contribute to ask-chat tool or report any issues, please visit the [GitHub repository](https://github.com/robertjbass/ask-chat).
 
 ## License
 
-The Ask-Chat CLI tool is open-source software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+ask-chat CLI tool is open-source software licensed under the [MIT license](https://opensource.org/licenses/MIT).
