@@ -1,12 +1,7 @@
 import path from "path";
+import { Config } from "./types";
 export const defaultSystemPrompt = `You are an assistant that helps software developers get information from their terminal.`;
-export const help = `
-exit: exit the program
-clear: clear the terminal
-help: show this help menu
-snippets: show a list of snippets
-snippet: show a snippet
-copy: copy the last code snippet to the clipboard`;
+
 export const createSnippet = `
 Your job is to look at some text and extract the code from it. You will return only JSON in the following format:
 {
@@ -46,7 +41,7 @@ export const defaultSnippetFolder = path.resolve(
   "gpt-snippets"
 );
 
-export const defaultConfig = {
+export const defaultConfig: Config = {
   apiKey: "",
   snippetFolder: defaultSnippetFolder,
   responseColor: "green",
