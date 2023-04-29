@@ -162,22 +162,26 @@ ${chalk["bgCyan"]["blue"].bold(createCenteredString(filePath))}
     }
   }
 
-  // TODO - in progress
-  private debugFile(absolutePath: string) {
+  private async debugFile(absolutePath: string) {
     const filePath = absolutePath.split(" ").join("");
     try {
       const file = fs.readFileSync(filePath, "utf8");
       console.log(highlight(file, { language: filePath.split(".")[1] }));
+      return `Find the bug(s) in this file:
+${file}`;
     } catch {
       console.log(chalk["red"](`File ${filePath} does not exist`));
+      return new Promise((resolve) => resolve(this.run()));
     }
   }
 
-  private async chatCompletion(input: Option | string) {
-    const prompt: Option = input.split(" ")[0] as Option;
-    const arg: string = input.split(" ").slice(1).join(" ");
+  private async chatCompletion(prompt: string) {
+    if (prompt === "") return new Promise((resolve) => resolve(this.run()));
 
-    switch (prompt) {
+    const input: Option = prompt.split(" ")[0] as Option;
+    const arg: string = prompt.split(" ").slice(1).join(" ");
+
+    switch (input) {
       case "exit":
         process.exit(0);
       case "clear":
@@ -188,9 +192,6 @@ ${chalk["bgCyan"]["blue"].bold(createCenteredString(filePath))}
         return new Promise((resolve) => resolve(this.run()));
       case "cat":
         this.cat(arg);
-        return new Promise((resolve) => resolve(this.run()));
-      case "debug":
-        this.debugFile(arg);
         return new Promise((resolve) => resolve(this.run()));
       case "copy":
         console.log(chalk["yellow"].italic("Copying..."));
@@ -227,6 +228,15 @@ ${chalk["bgCyan"]["blue"].bold(createCenteredString(filePath))}
         return new Promise((resolve) => resolve(this.run()));
 
       default:
+        if (input === "debug") {
+          console.log(chalk["yellow"].italic("Debugging..."));
+          const response = await this.debugFile(arg);
+          if (typeof response === "string") {
+            prompt = response;
+          } else {
+            return new Promise((resolve) => resolve(this.run()));
+          }
+        }
         return new Promise(async (resolve, reject) => {
           this.messages.push({ role: "user", content: prompt });
           const completion: any = await this.openai.createChatCompletion(

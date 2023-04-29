@@ -59,6 +59,8 @@ const section = (text: string) => {
   return chalk[bgColor][textColor].bold(centeredText);
 };
 
+const demoAbsoluteFilePath = "/Users/bob/dev/ask-chat/lib/openAiClient.js";
+
 export const help = chalkTemplate`
 ${section("OPTIONS")}
 
@@ -74,11 +76,11 @@ ${description("snippet fizzbuzz || snippet 1")}
 
 ${option(Option.Debug)}
 ${description("debug file - debug <absolute path>")}
-${description("debug /Users/bob/dev/ask-chat/lib/openAiClient.js")}
+${description(`debug ${demoAbsoluteFilePath}`)}
 
 ${option(Option.Cat)}
 ${description("show file with syntax highlighting - cat <absolute path>")}
-${description("cat /Users/bob/dev/ask-chat/lib/openAiClient.js")}
+${description(`cat ${demoAbsoluteFilePath}`)}
 
 ${option(Option.Copy)}
 ${description("copy the code snippets from the last response to clipboard")}
