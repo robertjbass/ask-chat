@@ -115,7 +115,7 @@ help
 
 ## Contributing
 
-If you'd like to contribute to the Ask-Chat CLI tool or report any issues, please visit the [GitHub repository](https://github.com/robertjbass/ask-chat-cli).
+If you'd like to contribute to the Ask-Chat CLI tool or report any issues, please visit the [GitHub repository](https://github.com/robertjbass/ask-chat).
 
 ## License
 
