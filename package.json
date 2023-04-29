@@ -1,6 +1,6 @@
 {
   "name": "ask-chat",
-  "version": "0.9.346",
+  "version": "0.9.39",
   "description": "Chat GPT in terminal with snippet support and more",
   "main": "lib/index.js",
   "type": "module",
@@ -22,8 +22,8 @@
   },
   "dependencies": {
     "chalk": "^5.2.0",
+    "cli-highlight": "^2.1.11",
     "clipboardy": "^3.0.0",
-    "dotenv": "^16.0.3",
     "openai": "^3.2.1"
   }
 }
