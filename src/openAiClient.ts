@@ -88,12 +88,23 @@ export class OpenAiClient {
       }
     }
 
+    const filePath = `${this.config.snippetFolder}/${snippetName}`;
+    const language = snippetName.split(".")[1];
+    let snippetDisplay;
     try {
-      const filePath = `${this.config.snippetFolder}/${snippetName}`;
       const snippet = fs.readFileSync(filePath, "utf8");
-      console.log(display.snippet(snippet, filePath));
+      try {
+        snippetDisplay = display.snippet(
+          highlight(snippet, { language }),
+          filePath
+        );
+      } catch {
+        snippetDisplay = display.snippet(snippet, filePath);
+      }
     } catch {
-      console.log(errors.snippetDoesntExist(snippetName));
+      snippetDisplay = errors.snippetDoesntExist(snippetName);
+    } finally {
+      console.log(snippetDisplay);
     }
   }
 
@@ -192,11 +203,10 @@ export class OpenAiClient {
 
     if (!fs.existsSync(baseFolder)) fs.mkdirSync(baseFolder);
     fs.writeFileSync(filePath, snippet);
-
     console.log(statuses.success(`Saved ${language} file at ${filePath}`));
   }
 
-  private async chatCompletion(prompt: string) {
+  private async prompt(prompt: string) {
     if (prompt === "") return new Promise((resolve) => resolve(this.run()));
     if (prompt === "exit") process.exit(0);
 
@@ -243,46 +253,50 @@ export class OpenAiClient {
           }
           prompt = response;
         }
-        return new Promise(async (resolve, reject) => {
-          this.messages.push({ role: "user", content: prompt });
-          const completion: any = await this.openai.createChatCompletion(
-            {
-              messages: this.messages,
-              model: "gpt-3.5-turbo",
-              stream: true,
-            },
-            { responseType: "stream" }
-          );
-
-          let resultText = "";
-          completion.data.on("data", (chunk: any) => {
-            const lines = decoder.decode(chunk).split("\n");
-            const mappedLines = lines
-              .map((line) => line.replace(/^data: /, "").trim())
-              .filter((line) => line !== "" && line !== undefined);
-
-            for (const line of mappedLines) {
-              if (line !== "[DONE]") {
-                const parsedLine = JSON.parse(line);
-                const { choices } = parsedLine;
-                const { delta } = choices[0];
-                const { content } = delta;
-
-                if (content) {
-                  resultText += content;
-                  const responseColor = this.config?.responseColor || "green";
-                  process.stdout.write(chalk[responseColor](content));
-                  return;
-                }
-              }
-            }
-            this.addAssistantMessage(resultText);
-          });
-
-          completion.data.on("end", () => resolve(this.run()));
-          completion.data.on("error", (error: any) => reject(error));
-        });
+        return this.chatCompletion(prompt);
     }
+  }
+
+  private async chatCompletion(prompt: string) {
+    return new Promise(async (resolve, reject) => {
+      this.messages.push({ role: "user", content: prompt });
+      const completion: any = await this.openai.createChatCompletion(
+        {
+          messages: this.messages,
+          model: "gpt-3.5-turbo",
+          stream: true,
+        },
+        { responseType: "stream" }
+      );
+
+      let resultText = "";
+      completion.data.on("data", (chunk: any) => {
+        const lines = decoder.decode(chunk).split("\n");
+        const mappedLines = lines
+          .map((line) => line.replace(/^data: /, "").trim())
+          .filter((line) => line !== "" && line !== undefined);
+
+        for (const line of mappedLines) {
+          if (line !== "[DONE]") {
+            const parsedLine = JSON.parse(line);
+            const { choices } = parsedLine;
+            const { delta } = choices[0];
+            const { content } = delta;
+
+            if (content) {
+              resultText += content;
+              const responseColor = this.config?.responseColor || "green";
+              process.stdout.write(chalk[responseColor](content));
+              return;
+            }
+          }
+        }
+        this.addAssistantMessage(resultText);
+      });
+
+      completion.data.on("end", () => resolve(this.run()));
+      completion.data.on("error", (error: any) => reject(error));
+    });
   }
 
   private addAssistantMessage(content: string) {
@@ -305,7 +319,7 @@ export class OpenAiClient {
 
     input.on("line", (line: any) => {
       input.close();
-      this.chatCompletion(line).catch(console.error);
+      this.prompt(line).catch(console.error);
     });
   }
 }

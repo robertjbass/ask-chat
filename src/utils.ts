@@ -71,17 +71,10 @@ export const display = {
     const bgColor: ChalkColor = "bgCyan";
     const textColor: ChalkColor = "blue";
     const heading = createCenteredString(filePath);
-    const language = filePath.split(".")[1];
-    let snippetWithSyntaxHighlighting;
-    try {
-      snippetWithSyntaxHighlighting = highlight(snippet, { language });
-    } catch {
-      console.log(errors.syntaxHighlightingUnavailable());
-      snippetWithSyntaxHighlighting = snippet;
-    }
+
     return [
       `\n${chalk[bgColor][textColor].bold(heading)}`,
-      `${snippetWithSyntaxHighlighting}\n`,
+      `${snippet}\n`,
     ].join("\n\n");
   },
 };
