@@ -5,75 +5,12 @@ import fs from "fs";
 import os from "os";
 import { highlight } from "cli-highlight";
 import { createSnippet, defaultConfig } from "./defaultValues.js";
-import { createCenteredString, helpMenu } from "./help.js";
-import { ChalkColor, ChatMessage, Config, Option } from "./types.js";
+import { helpMenu } from "./help.js";
+import { ChatMessage, Config, Option } from "./types.js";
 import { TextDecoder } from "util";
-import { copyToClipboard, sanitize } from "./utils.js";
+import { display, errors, sanitize, statuses } from "./utils.js";
+import clipboardy from "clipboardy";
 const decoder = new TextDecoder("utf-8");
-
-const errors = {
-  fileDoesntExist: (filePath: string) => {
-    return chalk["red"](`File ${filePath} does not exist`);
-  },
-  syntaxHighlightingUnavailable: () => {
-    return chalk["red"](`No syntax highlighting for this file type\n
-    `);
-  },
-  snippetNumberDoesntExist: (
-    snippetNameAsNumber: number,
-    snippetCount: number
-  ) => {
-    return [
-      `\n${chalk["red"].bold(`Snippet ${snippetNameAsNumber} does not exist`)}`,
-      `${chalk["yellow"](`Please enter 'snippet <1-${snippetCount}>'`)} ${chalk[
-        "blue"
-      ].italic("or")} ${chalk["yellow"]("'snippets' for a list")}\n`,
-    ].join("\n");
-  },
-};
-
-const statuses = {
-  loading: (message: string, color: ChalkColor = "yellow") => {
-    return chalk[color].italic(message);
-  },
-  success: (message: string, color: ChalkColor = "green") => {
-    return chalk[color](message);
-  },
-  info: (message: string, prefix: string = "", color: ChalkColor = "blue") => {
-    return `${prefix}${chalk[color](message)}`;
-  },
-  directory: (directory: string, color: ChalkColor = "blue") => {
-    return `${chalk["blue"].bold("Active Directory:")} ${chalk[color](
-      directory
-    )}`;
-  },
-};
-
-const display = {
-  heading: (text: string) => {
-    const bgColor: ChalkColor = "bgCyan";
-    const textColor: ChalkColor = "blue";
-    const heading = createCenteredString(text);
-    return `\n${chalk[bgColor][textColor].bold(heading)}\n`;
-  },
-  snippet: (snippet: string, filePath: string) => {
-    const bgColor: ChalkColor = "bgCyan";
-    const textColor: ChalkColor = "blue";
-    const heading = createCenteredString(filePath);
-    const language = filePath.split(".")[1];
-    let snippetWithSyntaxHighlighting;
-    try {
-      snippetWithSyntaxHighlighting = highlight(snippet, { language });
-    } catch {
-      console.log(errors.syntaxHighlightingUnavailable());
-      snippetWithSyntaxHighlighting = snippet;
-    }
-    return [
-      `\n${chalk[bgColor][textColor].bold(heading)}`,
-      `${snippetWithSyntaxHighlighting}\n`,
-    ].join("\n\n");
-  },
-};
 
 export class OpenAiClient {
   private openai: OpenAIApi;
@@ -122,9 +59,11 @@ export class OpenAiClient {
 
     if (snippetNameIsNumber) {
       if (snippetNameAsNumber > snippets.length || snippetNameAsNumber < 1) {
-        console.log(
-          errors.snippetNumberDoesntExist(snippetNameAsNumber, snippets.length)
+        const error = errors.snippetDoesntExist(
+          snippetNameAsNumber,
+          snippets.length
         );
+        console.log(error);
         return;
       }
       let i = 1;
@@ -149,9 +88,13 @@ export class OpenAiClient {
       }
     }
 
-    const filePath = `${this.config.snippetFolder}/${snippetName}`;
-    const snippet = fs.readFileSync(filePath, "utf8");
-    console.log(display.snippet(snippet, filePath));
+    try {
+      const filePath = `${this.config.snippetFolder}/${snippetName}`;
+      const snippet = fs.readFileSync(filePath, "utf8");
+      console.log(display.snippet(snippet, filePath));
+    } catch {
+      console.log(errors.snippetDoesntExist(snippetName));
+    }
   }
 
   private showSnippets() {
@@ -217,7 +160,13 @@ export class OpenAiClient {
     console.log(statuses.loading("Copying..."));
     const message = await this.getCodeFromLastMessage();
     const { code } = JSON.parse(message);
-    await copyToClipboard(code);
+
+    try {
+      await clipboardy.write(code);
+    } catch (error) {
+      console.error("Failed to copy text to clipboard:", error);
+    }
+
     console.log(statuses.success("Text copied to clipboard"));
   }
 
