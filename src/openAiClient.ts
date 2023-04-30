@@ -1,44 +1,92 @@
 import { Configuration, OpenAIApi } from "openai";
 import chalk from "chalk";
 import readline from "readline";
-import clipboardy from "clipboardy";
 import fs from "fs";
+import os from "os";
 import { highlight } from "cli-highlight";
 import { createSnippet, defaultConfig } from "./defaultValues.js";
 import { createCenteredString, helpMenu } from "./help.js";
-import { ChatMessage, Config, Option } from "./types.js";
-import os from "os";
+import { ChalkColor, ChatMessage, Config, Option } from "./types.js";
 import { TextDecoder } from "util";
+import { copyToClipboard, sanitize } from "./utils.js";
 const decoder = new TextDecoder("utf-8");
 
-const copyToClipboard = async (text: string) => {
-  try {
-    await clipboardy.write(text);
-  } catch (error) {
-    console.error("Failed to copy text to clipboard:", error);
-  }
+const errors = {
+  fileDoesntExist: (filePath: string) => {
+    return chalk["red"](`File ${filePath} does not exist`);
+  },
+  syntaxHighlightingUnavailable: () => {
+    return chalk["red"](`No syntax highlighting for this file type\n
+    `);
+  },
+  snippetNumberDoesntExist: (
+    snippetNameAsNumber: number,
+    snippetCount: number
+  ) => {
+    return [
+      `\n${chalk["red"].bold(`Snippet ${snippetNameAsNumber} does not exist`)}`,
+      `${chalk["yellow"](`Please enter 'snippet <1-${snippetCount}>'`)} ${chalk[
+        "blue"
+      ].italic("or")} ${chalk["yellow"]("'snippets' for a list")}\n`,
+    ].join("\n");
+  },
 };
 
-const sanitize = (name: string) => {
-  return name
-    .toLowerCase()
-    .split(" ")
-    .join("")
-    .split("-")
-    .join("")
-    .split("_")
-    .join("");
+const statuses = {
+  loading: (message: string, color: ChalkColor = "yellow") => {
+    return chalk[color].italic(message);
+  },
+  success: (message: string, color: ChalkColor = "green") => {
+    return chalk[color](message);
+  },
+  info: (message: string, prefix: string = "", color: ChalkColor = "blue") => {
+    return `${prefix}${chalk[color](message)}`;
+  },
+  directory: (directory: string, color: ChalkColor = "blue") => {
+    return `${chalk["blue"].bold("Active Directory:")} ${chalk[color](
+      directory
+    )}`;
+  },
+};
+
+const display = {
+  heading: (text: string) => {
+    const bgColor: ChalkColor = "bgCyan";
+    const textColor: ChalkColor = "blue";
+    const heading = createCenteredString(text);
+    return `\n${chalk[bgColor][textColor].bold(heading)}\n`;
+  },
+  snippet: (snippet: string, filePath: string) => {
+    const bgColor: ChalkColor = "bgCyan";
+    const textColor: ChalkColor = "blue";
+    const heading = createCenteredString(filePath);
+    const language = filePath.split(".")[1];
+    let snippetWithSyntaxHighlighting;
+    try {
+      snippetWithSyntaxHighlighting = highlight(snippet, { language });
+    } catch {
+      console.log(errors.syntaxHighlightingUnavailable());
+      snippetWithSyntaxHighlighting = snippet;
+    }
+    return [
+      `\n${chalk[bgColor][textColor].bold(heading)}`,
+      `${snippetWithSyntaxHighlighting}\n`,
+    ].join("\n\n");
+  },
 };
 
 export class OpenAiClient {
   private openai: OpenAIApi;
   private messages: ChatMessage[];
   private config: Config = defaultConfig;
+  private activeDirectory: string;
   private platform: NodeJS.Platform;
 
   constructor(config: Config) {
     this.platform = os.platform();
+    this.activeDirectory = process.cwd();
     this.config = config;
+    this.pwd();
     this.messages = [{ role: "system", content: this.config?.systemPrompt }];
     const configuration = new Configuration({ apiKey: this.config.apiKey });
     this.openai = new OpenAIApi(configuration);
@@ -74,11 +122,9 @@ export class OpenAiClient {
 
     if (snippetNameIsNumber) {
       if (snippetNameAsNumber > snippets.length || snippetNameAsNumber < 1) {
-        console.log(`
-${chalk["red"].bold(`Snippet ${snippetNameAsNumber} does not exist`)}
-${chalk["yellow"](`Please enter 'snippet <1-${snippets.length}>'`)} ${chalk[
-          "blue"
-        ].italic("or")} ${chalk["yellow"]("'snippets' for a list")}`);
+        console.log(
+          errors.snippetNumberDoesntExist(snippetNameAsNumber, snippets.length)
+        );
         return;
       }
       let i = 1;
@@ -105,42 +151,12 @@ ${chalk["yellow"](`Please enter 'snippet <1-${snippets.length}>'`)} ${chalk[
 
     const filePath = `${this.config.snippetFolder}/${snippetName}`;
     const snippet = fs.readFileSync(filePath, "utf8");
-
-    console.log(`
-${chalk["bgCyan"]["blue"].bold(createCenteredString(filePath))}
-
-${highlight(snippet, {
-  language: snippetName.split(".")[1],
-})}
-`);
-  }
-
-  private saveSnippet({
-    snippet,
-    snippetName,
-    fileExtension,
-    language,
-  }: {
-    snippet: string;
-    snippetName: string;
-    fileExtension: string;
-    language: string;
-  }) {
-    const fileName = `${snippetName}.${fileExtension}`;
-
-    if (!fs.existsSync(this.config.snippetFolder)) {
-      fs.mkdirSync(this.config.snippetFolder);
-    }
-    const filePath = `${this.config.snippetFolder}/${fileName}`;
-    fs.writeFileSync(filePath, snippet);
-    console.log(chalk["green"](`Saved ${language} snippet at ${filePath}`));
+    console.log(display.snippet(snippet, filePath));
   }
 
   private showSnippets() {
     const snippets = fs.readdirSync(this.config.snippetFolder);
-    console.log(
-      `\n${chalk["bgCyan"]["blue"].bold(createCenteredString("SNIPPETS"))}\n`
-    );
+    console.log(display.heading("SNIPPETS"));
     let list = "";
     let i = 1;
     for (const snippet of snippets) {
@@ -155,16 +171,19 @@ ${highlight(snippet, {
     let filePath = fPath.split(" ").join("");
 
     if (!isAbsolutePath) {
-      const currentDirectory = process.cwd();
-      filePath = `${currentDirectory}/${filePath}`;
+      filePath = `${this.activeDirectory}/${filePath}`;
     }
 
     try {
       const file = fs.readFileSync(filePath, "utf8");
       return file;
     } catch {
-      console.log(chalk["red"](`File ${filePath} does not exist`));
+      console.log(errors.fileDoesntExist(filePath));
     }
+  }
+
+  private pwd() {
+    console.log(statuses.directory(this.activeDirectory));
   }
 
   private cat(fPath: string) {
@@ -175,9 +194,7 @@ ${highlight(snippet, {
     try {
       console.log(highlight(file, { language: fPath.split(".")[1] }));
     } catch {
-      console.log(
-        chalk["red"](`No syntax highlighting for this file type\n\n`)
-      );
+      console.log(errors.syntaxHighlightingUnavailable());
       console.log(file);
     }
   }
@@ -191,31 +208,58 @@ ${highlight(snippet, {
     try {
       console.log(highlight(file, { language: fPath.split(".")[1] }));
     } catch {
-      console.log(
-        chalk["red"](`No syntax highlighting for this file type\n\n`)
-      );
+      console.log(errors.syntaxHighlightingUnavailable());
     }
-    return `Find the bug(s) in this file:
-${file}`;
+    return `Find the bug(s) in this file:\n${file}`;
   }
 
   private async copy() {
-    console.log(chalk["yellow"].italic("Copying..."));
+    console.log(statuses.loading("Copying..."));
     const message = await this.getCodeFromLastMessage();
     const { code } = JSON.parse(message);
     await copyToClipboard(code);
-    console.log(chalk["green"]("Text copied to clipboard"));
+    console.log(statuses.success("Text copied to clipboard"));
+  }
+
+  private async save(savePath?: string) {
+    console.log(statuses.loading(`Saving ${savePath ? "File" : "Snippet"}...`));
+    const saveMessage = await this.getCodeFromLastMessage();
+    const {
+      code: snippet,
+      language,
+      snippetName,
+      fileExtension,
+    } = JSON.parse(saveMessage);
+
+    let baseFolder = !!savePath ? savePath : this.config.snippetFolder;
+    let fileName = `${snippetName}.${fileExtension}`;
+
+    if (!!savePath && savePath.split(".").length > 1) {
+      baseFolder = savePath.split("/").slice(0, -1).join("/");
+      fileName = savePath.split("/").slice(-1)[0];
+    }
+
+    const filePath = `${baseFolder}/${fileName}`;
+
+    if (!fs.existsSync(baseFolder)) fs.mkdirSync(baseFolder);
+    fs.writeFileSync(filePath, snippet);
+
+    console.log(statuses.success(`Saved ${language} file at ${filePath}`));
   }
 
   private async chatCompletion(prompt: string) {
     if (prompt === "") return new Promise((resolve) => resolve(this.run()));
+    if (prompt === "exit") process.exit(0);
 
     const input: Option = prompt.split(" ")[0] as Option;
     const arg: string = prompt.split(" ").slice(1).join(" ");
 
+    if (input === "save" && !!arg) {
+      await this.save(arg);
+      return new Promise((resolve) => resolve(this.run()));
+    }
+
     switch (input) {
-      case "exit":
-        process.exit(0);
       case "clear":
         console.clear();
         return new Promise((resolve) => resolve(this.run()));
@@ -228,42 +272,27 @@ ${file}`;
       case "copy":
         await this.copy();
         return new Promise((resolve) => resolve(this.run()));
+      case "pwd":
+        this.pwd();
+        return new Promise((resolve) => resolve(this.run()));
       case "save":
-        console.log(chalk["yellow"].italic("Saving..."));
-        const saveMessage = await this.getCodeFromLastMessage();
-        const {
-          code: snippet,
-          language,
-          snippetName,
-          fileExtension,
-        } = JSON.parse(saveMessage);
-
-        this.saveSnippet({
-          snippet,
-          snippetName,
-          fileExtension,
-          language,
-        });
+        await this.save();
         return new Promise((resolve) => resolve(this.run()));
-
       case "snippet":
-        const name = arg;
-        this.showSnippet(name);
+        this.showSnippet(arg);
         return new Promise((resolve) => resolve(this.run()));
-
       case "snippets":
         this.showSnippets();
         return new Promise((resolve) => resolve(this.run()));
-
       default:
         if (input === "debug") {
-          console.log(chalk["yellow"].italic("Debugging..."));
+          console.log(statuses.loading("Debugging..."));
           const response = await this.debugFile(arg);
-          if (typeof response === "string") {
-            prompt = response;
-          } else {
+
+          if (typeof response !== "string") {
             return new Promise((resolve) => resolve(this.run()));
           }
+          prompt = response;
         }
         return new Promise(async (resolve, reject) => {
           this.messages.push({ role: "user", content: prompt });
@@ -311,12 +340,14 @@ ${file}`;
     this.messages.push({ role: "assistant", content });
   }
 
-  async run() {
+  private promptUser() {
     const userNameColor = this.config?.userNameColor || "blue";
+    const prompt = `\n\n${chalk[userNameColor].bold(this.config.userName)}: `;
+    process.stdout.write(prompt);
+  }
 
-    process.stdout.write(
-      `\n\n${chalk[userNameColor].bold(this.config.userName)}: `
-    );
+  public async run() {
+    this.promptUser();
     const input = readline.createInterface({
       input: process.stdin,
       output: process.stdout,

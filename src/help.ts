@@ -69,36 +69,36 @@ const demoRelativePath = "./openAiClient.js";
 export const help = chalkTemplate`
 ${section("OPTIONS")}
 
-${option(Option.Save)}
+${option(Option.SAVE)}
 ${description("save most recent code snippet or response")}
 
-${option(Option.Snippets)}
+${option(Option.SNIPPETS)}
 ${description("show a list of snippets")}
 
-${option(Option.Snippet)}
+${option(Option.SNIPPET)}
 ${description("show snippet - snippet <name or number>")}
 ${description("snippet fizzbuzz || snippet 1")}
 
-${option(Option.Debug)}
+${option(Option.DEBUG)}
 ${description("debug file - debug <file path>")}
 ${example(`debug ${demoAbsoluteFilePath}`)} ${chalk["gray"]("# absolute path")}
 ${example(`debug ${demoRelativePath}`)} ${chalk["gray"]("# relative path")}
 
-${option(Option.Cat)}
+${option(Option.CAT)}
 ${description("show file with syntax highlighting - cat <file path>")}
 ${example(`cat ${demoAbsoluteFilePath}`)} ${chalk["gray"]("# absolute path")}
 ${example(`cat ${demoRelativePath}`)} ${chalk["gray"]("# relative path")}
 
-${option(Option.Copy)}
+${option(Option.COPY)}
 ${description("copy the code snippets from the last response to clipboard")}
 
-${option(Option.Clear)}
+${option(Option.CLEAR)}
 ${description("clear the terminal")}
 
-${option(Option.Exit)}
+${option(Option.EXIT)}
 ${description("exit the program")}
 
-${option(Option.Help)}
+${option(Option.HELP)}
 ${description("show this help menu")}
 
 ${section("https://github.com/robertjbass")}
