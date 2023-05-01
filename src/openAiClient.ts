@@ -8,16 +8,34 @@ import { createSnippet, defaultConfig } from "./defaultValues.js";
 import { helpMenu } from "./help.js";
 import { ChatMessage, Config, Option } from "./types.js";
 import { TextDecoder } from "util";
-import { display, errors, sanitize, statuses } from "./utils.js";
+import {
+  display,
+  errors,
+  sanitize,
+  sanitizeImportName,
+  statuses,
+} from "./utils.js";
 import clipboardy from "clipboardy";
+import {
+  generateFileTree,
+  printFileTree,
+  printFileTreeString,
+} from "./crawl.js";
 const decoder = new TextDecoder("utf-8");
 
+// (async () => {
+//   const fileTree = await generateFileTree();
+//   console.log(`\n${printFileTree(fileTree, "object")}`);
+//   console.log(`\n${printFileTree(fileTree, "string")}`);
+// })();
+
 export class OpenAiClient {
+  private platform: NodeJS.Platform;
   private openai: OpenAIApi;
   private messages: ChatMessage[];
   private config: Config = defaultConfig;
   private activeDirectory: string;
-  private platform: NodeJS.Platform;
+  private projectStructure: { [key: string]: any } = {};
 
   constructor(config: Config) {
     this.platform = os.platform();
@@ -133,6 +151,7 @@ export class OpenAiClient {
       return file;
     } catch {
       console.log(errors.fileDoesntExist(filePath));
+      return null;
     }
   }
 
@@ -153,18 +172,63 @@ export class OpenAiClient {
     }
   }
 
-  private async debugFile(fPath: string) {
-    if (fPath === "") return new Promise((resolve) => resolve(this.run()));
+  private async debugFile(fPath: string, information: string = "") {
+    if (fPath === "") return null; // new Promise((resolve) => resolve(this.run()));
 
+    let tempFile = "";
     const file = this.readFile(fPath);
-    if (!file) return new Promise((resolve) => resolve(this.run()));
+    if (!file) return null; // new Promise((resolve) => resolve(this.run()));
+
+    const fileLines = file?.split("\n");
+    const fileTree = await generateFileTree();
+    const fileLineStrings = printFileTreeString(fileTree).split("\n");
+
+    for (const line of fileLines) {
+      const isImportLine =
+        (line?.includes("import ") && line.includes(" from ")) ||
+        line?.includes("require(");
+
+      if (!isImportLine) return (tempFile += line + "\n");
+
+      const importName = sanitizeImportName(
+        line?.split("from")?.pop() || line?.split("require(")?.pop() || ""
+      );
+
+      const isLocalImport =
+        importName.includes(".") || importName.includes("/");
+
+      if (!isLocalImport) return (tempFile += line + "\n");
+
+      const fileName = importName.split("/").pop() || "";
+      if (!fileName) return (tempFile += line + "\n");
+
+      const filePath = fileLineStrings.find((fileLine: string) => {
+        const segments = fileLine.split("/");
+        const name = segments[segments.length - 1].split(".")[0];
+        const fileNameWithoutExtension = fileName.split(".")[0];
+        return name === fileNameWithoutExtension;
+      });
+      if (!filePath) return (tempFile += line + "\n");
+
+      try {
+        const fileContent = this.readFile(filePath);
+        return (tempFile += fileContent + "\n");
+      } catch {
+        return (tempFile += line + "\n");
+      }
+    }
 
     try {
       console.log(highlight(file, { language: fPath.split(".")[1] }));
     } catch {
       console.log(errors.syntaxHighlightingUnavailable());
     }
-    return `Find the bug(s) in this file:\n${file}`;
+
+    const prefix = !information
+      ? "Find the bug(s) in this file:"
+      : "I need help with this code:";
+
+    return `${prefix}\n${tempFile || file}\n\n//${information}`;
   }
 
   private async copy() {
@@ -246,14 +310,16 @@ export class OpenAiClient {
       default:
         if (input === "debug") {
           console.log(statuses.loading("Debugging..."));
-          const response = await this.debugFile(arg);
+          const filePath = arg.split(" ")[0];
+          const information = arg.split(" ")?.slice(1)?.join(" ") || "";
+          const response = await this.debugFile(filePath, information);
 
-          if (typeof response !== "string") {
+          if (typeof response !== "string" || !response) {
             return new Promise((resolve) => resolve(this.run()));
           }
           prompt = response;
         }
-        return this.chatCompletion(prompt);
+        return await this.chatCompletion(prompt);
     }
   }
 

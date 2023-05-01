@@ -78,3 +78,16 @@ export const display = {
     ].join("\n\n");
   },
 };
+
+export const sanitizeImportName = (importName: string) => {
+  return importName
+    .split("'")
+    .join("")
+    .split('"')
+    .join("")
+    .split(" ")
+    .join("")
+    .split(";")
+    .join("")
+    .trim();
+};
