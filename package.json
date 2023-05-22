@@ -1,6 +1,6 @@
 {
   "name": "ask-chat",
-  "version": "0.9.41",
+  "version": "0.9.42",
   "description": "Chat GPT in terminal with snippet support and more",
   "main": "lib/index.js",
   "type": "module",
