@@ -12,7 +12,7 @@ export type Config = {
   userName: string;
 };
 
-export type ChalkColor =
+type BaseColor =
   | "black"
   | "red"
   | "green"
@@ -24,14 +24,18 @@ export type ChalkColor =
   | "gray"
   | "grey";
 
+export type ChalkColor = `bg${Capitalize<BaseColor>}` | BaseColor;
+
 export enum Option {
-  Save = "save",
-  Cat = "cat",
-  Debug = "debug",
-  Copy = "copy",
-  Snippets = "snippets",
-  Snippet = "snippet",
-  Help = "help",
-  Clear = "clear",
-  Exit = "exit",
+  SAVE = "save",
+  SAVE_FILE = "savefile",
+  PWD = "pwd",
+  CAT = "cat",
+  DEBUG = "debug",
+  COPY = "copy",
+  SNIPPETS = "snippets",
+  SNIPPET = "snippet",
+  HELP = "help",
+  CLEAR = "clear",
+  EXIT = "exit",
 }
