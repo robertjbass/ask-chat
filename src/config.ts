@@ -1,11 +1,11 @@
-import readline from "readline";
-import fs from "fs";
-import { Config } from "./types.js";
-import { defaultConfig } from "./defaultValues.js";
-import { OpenAiClient } from "./openAiClient.js";
-import chalk from "chalk";
+import readline from 'readline'
+import fs from 'fs'
+import { Config } from '@/types'
+import { defaultConfig } from '@/default-values'
+import { OpenAiClient } from '@/openai-client'
+import chalk from 'chalk'
 
-export const init = async () => {
+export async function init() {
   const configFileLocation = `${process.env.HOME}/.gpterminal.json`;
   if (!fs.existsSync(configFileLocation)) {
     fs.writeFileSync(configFileLocation, JSON.stringify({}));
@@ -18,26 +18,72 @@ export const init = async () => {
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
-      terminal: false,
     });
 
     await new Promise((resolve, _reject) => {
-      rl.question("Enter your OpenAI API key: ", (answer) => {
-        const config: Config = { ...defaultConfig, apiKey: answer };
-        console.clear();
-        fs.writeFileSync(configFileLocation, JSON.stringify(config));
-        return resolve(config);
+      process.stdout.write("Enter your OpenAI API key: ");
+
+      // Hide input
+      if (process.stdin.isTTY) {
+        (process.stdin as any).setRawMode(true);
+      }
+
+      let apiKey = "";
+
+      process.stdin.on("data", (char) => {
+        const byte = char.toString();
+
+        if (byte === "\n" || byte === "\r" || byte === "\u0004") {
+          // Enter or Ctrl+D pressed
+          if (process.stdin.isTTY) {
+            (process.stdin as any).setRawMode(false);
+          }
+          process.stdin.pause();
+          process.stdout.write("\n");
+
+          const config: Config = { ...defaultConfig, apiKey: apiKey.trim() };
+          console.clear();
+          fs.writeFileSync(configFileLocation, JSON.stringify(config));
+          rl.close();
+          return resolve(config);
+        } else if (byte === "\u0003") {
+          // Ctrl+C pressed
+          process.exit(0);
+        } else if (byte === "\u007f" || byte === "\b") {
+          // Backspace pressed
+          if (apiKey.length > 0) {
+            apiKey = apiKey.slice(0, -1);
+            process.stdout.write("\b \b");
+          }
+        } else if (byte >= " " && byte <= "~") {
+          // Printable character
+          apiKey += byte;
+          process.stdout.write("*");
+        }
       });
     });
     await init();
   } else {
-    const greetingText = `Type ${chalk["magenta"].bold(
-      "'help'"
-    )} for options ${chalk["yellow"].italic("or")} ${chalk["magenta"].bold(
-      "start chatting"
-    )}`;
-    console.log(greetingText);
+    console.clear();
+    console.log(
+      chalk.cyan.bold("\n╔═══════════════════════════════════════════╗")
+    );
+    console.log(
+      chalk.cyan.bold("║") +
+        chalk.white.bold("        Ask-Chat CLI - GPT-5 Powered       ") +
+        chalk.cyan.bold("║")
+    );
+    console.log(
+      chalk.cyan.bold("╚═══════════════════════════════════════════╝")
+    );
+    console.log(
+      chalk.gray("\nType") +
+        chalk.magenta.bold(" help ") +
+        chalk.gray("for commands or") +
+        chalk.magenta.bold(" start chatting\n")
+    );
+
     const openAiClient = new OpenAiClient(config);
     await openAiClient.run();
   }
-};
+}

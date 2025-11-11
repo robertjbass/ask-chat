@@ -1,21 +1,44 @@
-# Ask-Chat CLI Tool
+# Ask-Chat CLI
 
-The Ask-Chat CLI tool allows you to interact with a chat client using the command line interface. It also provides a variety of helpful commands for developers.
+> ChatGPT in your terminal - powered by GPT-5
 
-## Getting Started
+A lightning-fast CLI tool that brings the power of ChatGPT directly to your command line. Debug code, get instant answers, and boost your productivity without leaving the terminal.
 
-Requires Node and NPM to run
-To start the tool, simply run the command the following command in your terminal:
+## Features
 
+- 🤖 **GPT-5 Powered** - Latest OpenAI model for superior responses
+- 🔍 **Code Debugging** - Analyze files for bugs with AI assistance
+- 📋 **Clipboard Integration** - Copy responses instantly
+- 🎨 **Syntax Highlighting** - Beautiful code display
+- 💬 **Conversational Memory** - Context-aware throughout your session
+- ⚡ **Streaming Responses** - Real-time AI responses
+
+## Quick Start
+
+### Requirements
+- Node.js >= 18.0.0
+- OpenAI API key ([Get one here](https://platform.openai.com/api-keys))
+- pnpm >= 8.0.0 (recommended) or npm
+
+### Installation
+
+**Using pnpm (recommended):**
+```bash
+pnpx ask-chat
+```
+
+**Using npm:**
 ```bash
 npx ask-chat
 ```
 
+On first run, you'll be prompted for your OpenAI API key. It will be securely stored in `~/.gpterminal.json`.
+
 ## Usage
 
-The `ask-chat` interactive terminal is effectively `chat gpt` with many custom commands and access to your filesystem. It will not read anything that you do not ask it to read, and it will not delete or modify files.
+### Basic Chat
 
-You can immediately start chatting:
+Simply start typing to chat with GPT-5:
 
 ````txt
 bob: How do I write fizzbuzz in python?
@@ -45,83 +68,96 @@ In this program, we iterate over the numbers 1 to 100 using a `for` loop. For ea
 If the number is divisible by both 3 and 5, we print "FizzBuzz". If it is divisible by 3, we print "Fizz". If it is divisible by 5, we print "Buzz". And if it is not divisible by either 3 or 5, we simply print the number itself.
 ````
 
-## snippets
+## Available Commands
 
-save most recent code snippet from response
-
+### debug
+Analyze a file for bugs and get AI-powered debugging help:
 ```bash
-save
+debug ./myfile.js
+debug /absolute/path/to/file.py
 ```
 
-or you may copy it to the clipboard
+### cat
+Display a file with beautiful syntax highlighting:
+```bash
+cat ./myfile.js
+```
 
+### copy
+Copy the last AI response to your clipboard:
 ```bash
 copy
 ```
 
-show a list of snippets
-
+### pwd
+Show your current working directory:
 ```bash
-snippets
-
-# 1 FizzBuzz.py
-# 2 RecursiveCountdown.py
-# 3 factorial.py
+pwd
 ```
 
-show snippet by name
-
+### Other Commands
 ```bash
-snippet fizzbuzz
+help    # Show all available commands
+clear   # Clear the terminal
+exit    # Exit the program
 ```
 
-or by list order
+## Configuration
 
-```bash
-snippet 1
+Your configuration is stored in `~/.gpterminal.json`. You can manually edit this file to:
+- Change your API key
+- Customize response colors
+- Modify the username display
+- Adjust the system prompt
+
+Example configuration:
+```json
+{
+  "apiKey": "sk-...",
+  "responseColor": "green",
+  "userNameColor": "blue",
+  "systemPrompt": "You are an assistant that helps software developers.",
+  "userName": "YourName"
+}
 ```
 
-### debug
+## Development
 
-Debug a local file with chat-gpt
-
+### Setup
 ```bash
-# absolute path
-debug /Users/bob/dev/ask-chat/lib/openAiClient.js
-
-# relative path
-debug ./openAiClient.js
+git clone https://github.com/robertjbass/ask-chat.git
+cd ask-chat
+pnpm install
 ```
 
-### cat
-
-Show file with syntax highlighting
-
+### Build
 ```bash
-# absolute
-cat /Users/bob/dev/ask-chat/lib/openAiClient.js
-
-# relative
-cat ./openAiClient.js
+pnpm run build
 ```
 
-### other
-
+### Development Mode
+Run with hot-reload using tsx:
 ```bash
-# clear terminal window
-clear
-
-# exit the app
-exit
-
-# show the help menu with options
-help
+pnpm run dev
 ```
 
 ## Contributing
 
-If you'd like to contribute to ask-chat tool or report any issues, please visit the [GitHub repository](https://github.com/robertjbass/ask-chat).
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
+
+## Issues & Support
+
+If you encounter any problems or have suggestions, please [open an issue](https://github.com/robertjbass/ask-chat/issues).
 
 ## License
 
-ask-chat CLI tool is open-source software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This project is licensed under the ISC License.
+
+## Author
+
+**Bob Bass**
+- GitHub: [@robertjbass](https://github.com/robertjbass)
+
+---
+
+Made with ❤️ for developers who live in the terminal
