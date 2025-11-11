@@ -1,29 +1,65 @@
 {
   "name": "ask-chat",
-  "version": "0.9.42",
-  "description": "Chat GPT in terminal with snippet support and more",
+  "version": "0.9.51",
+  "description": "ChatGPT in your terminal - powered by GPT-5. Debug code, get help, and chat with AI without leaving the command line.",
   "main": "lib/index.js",
   "type": "module",
   "bin": {
-    "index": "lib/index.js"
+    "ask-chat": "lib/index.js"
   },
+  "packageManager": "pnpm@10.19.0",
   "scripts": {
-    "build": "node_modules/.bin/tsc",
+    "build": "tsc && tsc-alias -p tsconfig.json --resolve-full-paths",
     "start": "node lib/index.js",
-    "serve": "nodemon --watch src --ext 'ts' --exec \"npm run build && npm run start\""
+    "dev": "tsx --tsconfig tsconfig.json src/index.ts",
+    "dev:watch": "tsx watch --clear-screen=false --tsconfig tsconfig.json src/index.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "pnpm run build",
+    "prepublishOnly": "pnpm run build"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "chatgpt",
+    "gpt-5",
+    "openai",
+    "cli",
+    "terminal",
+    "ai",
+    "assistant",
+    "developer-tools",
+    "debug",
+    "code-analysis"
+  ],
+  "author": "Bob Bass",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robertjbass/ask-chat.git"
+  },
+  "bugs": {
+    "url": "https://github.com/robertjbass/ask-chat/issues"
+  },
+  "homepage": "https://github.com/robertjbass/ask-chat#readme",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "files": [
+    "lib/**/*",
+    "README.md",
+    "LICENSE"
+  ],
   "devDependencies": {
-    "@types/node": "^18.16.1",
-    "nodemon": "^2.0.22",
-    "typescript": "^5.0.4"
+    "@types/node": "^22.10.2",
+    "prettier": "^3.6.2",
+    "tsc-alias": "^1.8.16",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
   },
   "dependencies": {
-    "chalk": "^5.2.0",
+    "chalk": "^5.3.0",
     "cli-highlight": "^2.1.11",
-    "clipboardy": "^3.0.0",
-    "openai": "^3.2.1"
+    "clipboardy": "^4.0.0",
+    "openai": "^4.77.3"
   }
 }

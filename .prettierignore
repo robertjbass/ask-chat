@@ -1,0 +1,39 @@
+# Dependencies
+node_modules
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Build output
+dist
+lib
+*.tsbuildinfo
+
+# Logs
+*.log
+
+# IDE
+.vscode
+.idea
+
+# Git
+.git
+
+# Environment
+.env
+.env.*
+
+# Coverage
+coverage
+
+# Temporary
+*.tmp
+.cache
+.temp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Other
+CHANGELOG.md

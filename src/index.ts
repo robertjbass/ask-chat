@@ -1,4 +1,4 @@
 #!/usr/bin/env node
 
-import { init } from "./config.js";
+import { init } from "@/config";
 init();
