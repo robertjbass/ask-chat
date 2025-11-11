@@ -1,6 +1,6 @@
 {
   "name": "ask-chat",
-  "version": "0.9.51",
+  "version": "1.0.0",
   "description": "ChatGPT in your terminal - powered by GPT-5. Debug code, get help, and chat with AI without leaving the command line.",
   "main": "lib/index.js",
   "type": "module",
@@ -11,8 +11,7 @@
   "scripts": {
     "build": "tsc && tsc-alias -p tsconfig.json --resolve-full-paths",
     "start": "node lib/index.js",
-    "dev": "tsx --tsconfig tsconfig.json src/index.ts",
-    "dev:watch": "tsx watch --clear-screen=false --tsconfig tsconfig.json src/index.ts",
+    "dev": "tsx watch --clear-screen=false --tsconfig tsconfig.json src/index.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "pnpm run build",
